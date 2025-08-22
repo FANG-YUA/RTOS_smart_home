@@ -19,6 +19,13 @@
 步骤：使用cubemx配置ADC端口，移植至自己的项目中的时候，需要把adc相关的.c.h文件一并添加，同时，在stm32f1xx_hal_cont.h文
 件里把“#define HAL_ADC_MODULE_ENABLED   */”取消注释，不然会出现ADC 函数未编译的链接阶段错误（L6218E）。
 
+2025.8.21 周四  xshell调试
+
+下载了xshell,学会使用xshell连接串口，调试时代码卡在NTC_Init();中，步进显示READ_BIT(hadc->Instance->CR2, ~(ADC_CR2_ADON
+| ADC_CR2_DMA | ADC_CR2_SWSTART| ADC_CR2_JSWSTART | ADC_CR2_JEXTTRIG | ADC_CR2_JEXTSEL | ADC_CR2_TSVREFE)) == tmp_cr2 
+这个条件为假。意味着 ADC 控制寄存器（CR2）的状态不符合预期，可能是 ADC 处于异常状态或配置存在问题。检查可能是stm32f1xx_hal_gpio_ex.c
+和stm32f1xx_hal_msp.c出现问题，应该还是使用cubemx配置的时候没有移植完全。已解决。
+
 
 
 

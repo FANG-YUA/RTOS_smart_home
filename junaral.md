@@ -8,7 +8,7 @@
 
 2025.8.18 周一  顶层设计2
 
-步骤：建立mmc.c/.h，包括mmc_ctrl_require和mmc_ctrl_init。对于风扇与灯光的控制，使用宏定义代替01。以及判断开
+1.建立mmc.c/.h，包括mmc_ctrl_require和mmc_ctrl_init。对于风扇与灯光的控制，使用宏定义代替01。以及判断开
 关的气温/亮度阈值，也使用宏定义，优点在于方便后续修改。建立business_test.c/.h文件，使用mock_sample_task_entry
 和mock_switch_task_entry，返回气温/亮度定值，以及风扇与灯光的打开，以此实现假采集，测试顶层设计的可用性，每一步
 都可以打印语句，判断运行情况，方便错误调试。测试现在使用的是定值，后续可以实现手动修改值和自动修改值进行测试。
@@ -21,11 +21,20 @@
 
 2025.8.21 周四  xshell调试
 
-下载了xshell,学会使用xshell连接串口，调试时代码卡在NTC_Init();中，步进显示READ_BIT(hadc->Instance->CR2, ~(ADC_CR2_ADON
+1.下载了xshell,学会使用xshell连接串口，调试时代码卡在NTC_Init();中，步进显示READ_BIT(hadc->Instance->CR2, ~(ADC_CR2_ADON
 | ADC_CR2_DMA | ADC_CR2_SWSTART| ADC_CR2_JSWSTART | ADC_CR2_JEXTTRIG | ADC_CR2_JEXTSEL | ADC_CR2_TSVREFE)) == tmp_cr2 
 这个条件为假。意味着 ADC 控制寄存器（CR2）的状态不符合预期，可能是 ADC 处于异常状态或配置存在问题。检查可能是stm32f1xx_hal_gpio_ex.c
 和stm32f1xx_hal_msp.c出现问题，应该还是使用cubemx配置的时候没有移植完全。已解决。
 
+2025.8.22 周五 适配层
 
-
-
+1.解耦硬件差异，统一接口规范
+由于传感器可能来自不同厂家，适配层把“统一接口”封装出来（init + sample），让上层调用方式固定。不管底层是 NTC 还是 AP3216C，上层都是调用
+Sensor_Xxx_Ops.p_sensor_init();
+Sensor_Xxx_Ops.p_sensor_sample_value();
+2.支持可配置/可扩展
+用 #define DRV_SAMPLE_ADAPTOR_BRIGHT_USING_AP3216C 这样的宏来选择用哪个驱动，以后如果有新的硬件，只需要在 SampleDrvAdaptor.h 里加新
+的宏和函数指针映射，不用改上层逻辑。
+3.遇到的问题及解决方法：在获取AP3216C的值的时候，芯片在上电或写入工作模式（0x03：ALS+PS+IR 连续模式，或者 0x05：ALS 单次模式）后，需要一个完整的积分周
+期才能把第一帧数据更新到寄存器。如果在刚刚使能后立刻读 0x0C/0x0D，就只能读到旧值（复位后是 0），所以第一次总是得到 0。把延时放在 enable 之后，
+让芯片有时间采样。并且在 gb() 里初始化后进行延时再调用 p_sensor_sample_value()。
